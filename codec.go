@@ -42,7 +42,7 @@ func (jc *JsonCodec) Recv(method *string, out interface{}, strErr *string) error
 		return err
 	}
 
-	if method == nil {
+	if method != nil {
 		*method = msg.Method
 	}
 

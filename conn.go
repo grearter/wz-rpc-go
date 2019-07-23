@@ -1,8 +1,14 @@
 package wz_rpc_go
 
 import (
+	"context"
+	"errors"
 	"net"
 	"time"
+)
+
+var (
+	ErrCallTimeout = errors.New("call timeout")
 )
 
 type Conn struct {
@@ -27,9 +33,25 @@ func (rc *Conn) Call(method string, in, out interface{}) error {
 	return nil
 }
 
-// todo
 func (rc *Conn) CallWithTimeout(method string, in, out interface{}, timeout time.Duration) error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- rc.Call(method, in, out)
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			rc.MarkUnusable()
+			return ErrCallTimeout
+		case err := <-errChan:
+			return err
+		}
+	}
+
 }
 
 func (rc *Conn) Close() error {
