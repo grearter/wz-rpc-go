@@ -12,6 +12,7 @@ import (
 
 var (
 	typeOfError              = reflect.TypeOf((*error)(nil)).Elem()
+	ErrDupService            = errors.New("service name is dup")
 	NoExportedMethod         = errors.New("no exported Method")
 	ErrNilRequestMethod      = errors.New("nil request Method")
 	ErrRequestMethodNotFound = errors.New("request Method not found")
@@ -160,13 +161,21 @@ func isExportedOrBuiltinType(t reflect.Type) bool {
 	return isExported(t.Name()) || t.PkgPath() == ""
 }
 
-func (s *Server) Register(receiver interface{}) error {
+func (s *Server) Register(serviceName string, receiver interface{}) error {
 	recvType := reflect.TypeOf(receiver)
 	recvValue := reflect.ValueOf(receiver)
 
-	serviceName := reflect.Indirect(recvValue).Type().Name()
+	if serviceName == "" {
+		serviceName = reflect.Indirect(recvValue).Type().Name()
+	}
+
 	if serviceName == "" {
 		return errors.New("invalid service name")
+	}
+
+	// 重复注册
+	if _, ok := s.serviceMap[serviceName]; ok {
+		return ErrDupService
 	}
 
 	newService := &service{
