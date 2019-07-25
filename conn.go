@@ -25,9 +25,14 @@ func (rc *Conn) Call(method string, in, out interface{}) error {
 		return err
 	}
 
-	err = rc.Codec.Recv(nil, out, nil)
+	var errStr string
+	err = rc.Codec.Recv(nil, out, &errStr)
 	if err != nil {
 		return err
+	}
+
+	if errStr != "" {
+		return errors.New(errStr)
 	}
 
 	return nil
